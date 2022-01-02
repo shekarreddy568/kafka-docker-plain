@@ -2,7 +2,7 @@
 version: '3.4'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.0.0
+    image: confluentinc/cp-zookeeper:7.0.1
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -12,7 +12,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-kafka:6.0.0
+    image: confluentinc/cp-kafka:7.0.1
     hostname: broker
     container_name: broker
     depends_on:
@@ -27,53 +27,49 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.0.1
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - zookeeper
+      - broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
 
-      
-#   schema-registry:
-#     image: confluentinc/cp-schema-registry:6.0.0
-#     hostname: schema-registry
-#     container_name: schema-registry
-#     depends_on:
-#       - zookeeper
-#       - broker
-#     ports:
-#       - "8081:8081"
-#     environment:
-#       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-#       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
-
-#   connect:
-#     build: .
-#     image: confluentinc/cp-kafka-connect-custom:latest
-#     hostname: connect
-#     container_name: connect
-#     depends_on:
-#       - zookeeper
-#       - broker
-#       - schema-registry
-#     ports:
-#       - "8083:8083"
-#     environment:
-#       CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
-#       CONNECT_REST_ADVERTISED_HOST_NAME: connect
-#       CONNECT_REST_PORT: 8083
-#       CONNECT_GROUP_ID: compose-connect-group
-#       CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
-#       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-#       CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
-#       CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
-#       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-#       CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-#       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-#       CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-#       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-#       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-#       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-#       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-#       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-#       CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
-
-
+  connect:
+    build: .
+    image: confluentinc/cp-kafka-connect-custom:latest
+    hostname: connect
+    container_name: connect
+    depends_on:
+      - zookeeper
+      - broker
+      - schema-registry
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
   # ksqldb-server:
   #   image: confluentinc/ksqldb-server:0.15.0
   #   hostname: ksqldb-server
@@ -97,42 +93,42 @@ services:
   #   entrypoint: /bin/sh
   #   tty: true
 
-# # MongoDB Replica Set
-#   mongo1:
-#     image: "mongo:latest"
-#     hostname: mongo1
-#     container_name: mongo1
-#     command: --replSet rs0 --oplogSize 128
-#     volumes:
-#       - rs1:/data/db
-#     ports:
-#       - "27017:27017"
-#     restart: always
-#   mongo2:
-#     image: "mongo:latest"
-#     hostname: mongo2
-#     container_name: mongo2
-#     command: --replSet rs0 --oplogSize 128
-#     volumes:
-#       - rs2:/data/db
-#     ports:
-#       - "27018:27017"
-#     restart: always
-#   mongo3:
-#     image: "mongo:latest"
-#     hostname: mongo3
-#     container_name: mongo3
-#     command: --replSet rs0 --oplogSize 128
-#     volumes:
-#       - rs3:/data/db
-#     ports:
-#       - "27019:27017"
-#     restart: always    
+  # # MongoDB Replica Set
+  #   mongo1:
+  #     image: "mongo:latest"
+  #     hostname: mongo1
+  #     container_name: mongo1
+  #     command: --replSet rs0 --oplogSize 128
+  #     volumes:
+  #       - rs1:/data/db
+  #     ports:
+  #       - "27017:27017"
+  #     restart: always
+  #   mongo2:
+  #     image: "mongo:latest"
+  #     hostname: mongo2
+  #     container_name: mongo2
+  #     command: --replSet rs0 --oplogSize 128
+  #     volumes:
+  #       - rs2:/data/db
+  #     ports:
+  #       - "27018:27017"
+  #     restart: always
+  #   mongo3:
+  #     image: "mongo:latest"
+  #     hostname: mongo3
+  #     container_name: mongo3
+  #     command: --replSet rs0 --oplogSize 128
+  #     volumes:
+  #       - rs3:/data/db
+  #     ports:
+  #       - "27019:27017"
+  #     restart: always    
 
-# volumes:
-#   rs1:
-#   rs2:
-#   rs3:
+  # volumes:
+  #   rs1:
+  #   rs2:
+  #   rs3:
   # mysql:
   #   image: mysql:5.7
   #   hostname: mysql
