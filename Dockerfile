@@ -11,4 +11,4 @@ COPY jars/ojdbc7-12.1.0.2.jar /usr/share/confluent-hub-components/confluentinc-k
 COPY jars/mssql-jdbc-8.4.0.jre8.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/mssql-jdbc-8.4.0.jre8.jar
 COPY jars/mysql-connector-java-5.1.23.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/mysql-connector-java-5.1.23.jar
 COPY jars/kafka-connect-salesforce-0.3-SNAPSHOT.tar.gz /tmp
-RUN tar -xvzf /tmp/kafka-connect-salesforce-0.3-SNAPSHOT.tar.gz
+RUN  tar -xvzf /tmp/kafka-connect-salesforce-0.3-SNAPSHOT.tar.gz
