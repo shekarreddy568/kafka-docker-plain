@@ -1,0 +1,15 @@
+{
+    "name": "mssql-debezium-source",
+    "config": {
+      "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector", 
+      "database.hostname": "mssql", 
+      "database.port": "1433", 
+      "database.user": "sa", 
+      "database.password": "Test@123456789", 
+      "database.dbname": "test", 
+      "database.server.name": "mssql_1", 
+      "table.include.list": "test.Persons,test.Employees", 
+      "database.history.kafka.bootstrap.servers": "broker:29092", 
+      "database.history.kafka.topic": "dbhistory.mssql_1"     
+    }
+  }

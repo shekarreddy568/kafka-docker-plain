@@ -2,7 +2,8 @@
 version: '3.4'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
+    platform: linux/x86_64
+    image: confluentinc/cp-zookeeper:7.1.1
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -12,7 +13,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-kafka:7.0.1
+    platform: linux/x86_64
+    image: confluentinc/cp-kafka:7.1.1
     hostname: broker
     container_name: broker
     depends_on:
@@ -29,7 +31,8 @@ services:
       KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:7.0.1
+    platform: linux/x86_64
+    image: confluentinc/cp-schema-registry:7.1.1
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
@@ -42,6 +45,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
 
   connect:
+    platform: linux/x86_64
     build: .
     image: confluentinc/cp-kafka-connect-custom:latest
     hostname: connect
@@ -72,22 +76,38 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       CONNECT_PLUGIN_PATH: '/usr/share/java,usr/share/kafka-connect,/usr/share/confluent-hub-components'
   
-  ibmmq:
-    image: ibmcom/mq # https://hub.docker.com/r/ibmcom/mq/
-    hostname: ibmmq
-    container_name: ibmmq
+  mssql:
+    hostname: mssql
+    container_name: mssql
+    image: mcr.microsoft.com/azure-sql-edge
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql:/var/opt/mssql/data
+    user: root
     environment:
-      LICENSE: accept
-      MQ_QMGR_NAME: QM1
-      MQ_ADMIN_PASSWORD: passw0rd
-      MQ_APP_PASSWORD: passw0rd
+      MSSQL_SA_PASSWORD: Test@123456789
+      ACCEPT_EULA: 1
+      MSSQL_AGENT_ENABLED: "TRUE"
+
+volumes:
+  mssql:
+  # ibmmq:
+  #   image: ibmcom/mq # https://hub.docker.com/r/ibmcom/mq/
+  #   hostname: ibmmq
+  #   container_name: ibmmq
+  #   environment:
+  #     LICENSE: accept
+  #     MQ_QMGR_NAME: QM1
+  #     MQ_ADMIN_PASSWORD: passw0rd
+  #     MQ_APP_PASSWORD: passw0rd
     # volumes:
     #     - ../../connect/connect-ibm-mq-source/security/snakeoil-ca-1.crt:/etc/mqm/pki/keys/mykey/ca.crt
     #     - ../../connect/connect-ibm-mq-source/security/ibmmq.certificate.pem:/etc/mqm/pki/keys/mykey/tls.crt
     #     - ../../connect/connect-ibm-mq-source/security/ibmmq.key:/etc/mqm/pki/keys/mykey/tls.key
-    ports:
-      - '1414:1414'
-      - '9443:9443'
+    # ports:
+    #   - '1414:1414'
+    #   - '9443:9443'
 
   # ksqldb-server:
   #   image: confluentinc/ksqldb-server:0.15.0

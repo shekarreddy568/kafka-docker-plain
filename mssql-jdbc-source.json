@@ -1,0 +1,15 @@
+{
+    "name": "mssql-jdbc-source",
+    "config": {
+      "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+      "tasks.max": "1",
+      "connection.url": "jdbc:sqlserver://mssql;databaseName=test",
+      "connection.user": "sa",
+      "connection.password": "Test@123456789",
+      "table.whitelist": "Persons, Employees",
+      "mode": "timestamp+incrementing",
+      "incrementing.column.name": "id",
+      "timestamp.column.name": "",
+      "topic.prefix": "test."
+    }
+  }

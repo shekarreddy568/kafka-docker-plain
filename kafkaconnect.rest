@@ -1,0 +1,158 @@
+
+# @cluster = https://kafkaconnect-jdbc.elisabeth.mytaxi.com
+# @cluster = https://kafkaconnect-surge-price.elisabeth.mytaxi.com
+@cluster = http://localhost:8083
+@connector_name=mssql-debezium-source1
+
+
+###### List the connectors ##########
+
+curl {{cluster}}/connectors
+
+####### Describe Connector ######
+
+curl {{cluster}}/connectors/{{connector_name}}
+
+####### Describe Connector config ######
+
+curl {{cluster}}/connectors/{{connector_name}}/config
+
+####### check the status of a Connector ######
+
+curl {{cluster}}/connectors/{{connector_name}}/status
+
+
+#### Restart connector #########
+
+POST {{cluster}}/connectors/{{connector_name}}/restart
+# curl -X POST -H {{cluster}}/connectors/{{connector_name}}/restart
+
+#### Pause connector #########
+
+PUT {{cluster}}/connectors/{{connector_name}}/pause
+
+#curl -X PUT -H {{cluster}}/connectors/{{connector_name}}/pause
+
+#### Resume connector #########
+PUT {{cluster}}/connectors/{{connector_name}}/resume
+#curl -X PUT -H {{cluster}}/connectors/{{connector_name}}/resume
+
+######### Get tasks of a connector ######
+
+curl {{cluster}}/connectors/{{connector_name}}/tasks
+
+######### Restart a task of a connector ##########
+
+POST {{cluster}}/connectors/{{connector_name}}/tasks/0/restart
+
+###### Delete a Connector ###########
+
+curl -X DELETE {{cluster}}/connectors/{{connector_name}}
+
+######### Get connector plugins ########
+
+GET {{cluster}}/connector-plugins
+
+######## Validate the provided configuration against configuration definition ########
+
+PUT http://kafkaconnect.fitnessforce.com/connector-plugins/io.debezium.connector.mysql.MySqlConnector/config/validate
+Content-Type: application/json
+Accept: application/json
+
+{
+}
+
+##############
+
+POST {{cluster}}/connectors
+Content-Type: application/json
+Accept: application/json
+  
+{
+    "name": "mssql-debezium-source1",
+    "config": {
+      "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector", 
+      "database.hostname": "mssql", 
+      "database.port": "1433", 
+      "database.user": "sa", 
+      "database.password": "Test@123456789", 
+      "database.dbname": "test", 
+      "database.server.name": "mssql_1", 
+      "table.include.list": "dbo.Persons,dbo.Employees", 
+      "database.history.kafka.bootstrap.servers": "broker:29092", 
+      "database.history.kafka.topic": "dbhistory.mssql_1"     
+    }
+}
+
+
+
+##############
+
+POST {{cluster}}/connectors
+Content-Type: application/json
+Accept: application/json
+  
+{
+    "name": "salesforce-source-Contact",
+    "config": {
+      "connector.class": "com.github.jcustenborder.kafka.connect.salesforce.SalesforceSourceConnector",
+      "salesforce.username": "ashwin@sastecacademy.com",
+      "salesforce.password": "Dublin4693",
+      "tasks.max": 1,
+      "salesforce.push.topic.name": "ContactPushTopic",
+      "kafka.topic": "SalesforceContact",
+      "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0fwEHQOFCIJUMAyvwS9ICCVqNsDGXQjNv6OY2czF8NdmqNnBUNcdQEJCbKwQ",
+      "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
+      "salesforce.consumer.secret": "F0421FBD0186B7F7E5F4D9B3CFE84E2741ED947A8AEAAF816DAD427864848958",
+      "salesforce.object": "Contact",
+      "salesforce.object.fields": "Id,Email,Name,Phone"
+    }
+  }
+
+##############
+
+POST {{cluster}}/connectors
+Content-Type: application/json
+Accept: application/json
+  
+{
+    "name": "salesforce-source-Lead2",
+    "config": {
+      "connector.class": "com.github.jcustenborder.kafka.connect.salesforce.SalesforceSourceConnector",
+      "salesforce.username": "ashwin@sastecacademy.com",
+      "salesforce.password": "Dublin4693",
+      "tasks.max": 1,
+      "salesforce.push.topic.name": "LeadsPushTopic",
+      "kafka.topic": "SalesforceLead",
+      "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0RIyxzpweU5xxtUfidN8Laqx1EyyK_mZ5itr.cxbf3kEE5gQT66tYfyFij07",
+      "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
+      "salesforce.consumer.secret": "215B4DACC5F881841C7DFCFF3E6D6C113B4255BF10B522B782657FB30FF97ACA",
+      "salesforce.object": "Lead"
+    }
+  }
+
+
+####
+POST {{cluster}}/connectors
+Content-Type: application/json
+Accept: application/json
+
+{
+     "name": "lead-pushtopic",
+     "config": {
+         "connector.class" : "io.confluent.salesforce.SalesforcePushTopicSourceConnector",
+         "tasks.max" : "1",
+         "kafka.topic" : "sfdc-pushtopic-leads",
+         "salesforce.object" : "Lead",
+         "salesforce.push.topic.name" : "LeadsPushTopic",
+        "salesforce.username": "ashwin@sastecacademy.com",
+        "salesforce.password": "Dublin4693",
+        "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0RIyxzpweU5xxtUfidN8Laqx1EyyK_mZ5itr.cxbf3kEE5gQT66tYfyFij07",
+        "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
+        "salesforce.consumer.secret": "215B4DACC5F881841C7DFCFF3E6D6C113B4255BF10B522B782657FB30FF97ACA",
+         "salesforce.initial.start" : "all",
+         "confluent.topic.bootstrap.servers": "broker:29092",
+         "confluent.topic.replication.factor": "1",
+         "confluent.license": ""
+     }
+ }
