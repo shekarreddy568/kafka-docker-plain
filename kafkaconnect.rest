@@ -69,7 +69,7 @@ Content-Type: application/json
 Accept: application/json
   
 {
-    "name": "mssql-debezium-source1",
+    "name": "mssql-debezium-source",
     "config": {
       "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector", 
       "database.hostname": "mssql", 
