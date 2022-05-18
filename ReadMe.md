@@ -1,8 +1,15 @@
 # kafka-docker-plain
- 
-https://github.com/vdesabou/kafka-docker-playground/tree/master/connect/connect-ibm-mq-sink
 
-https://github.com/vdesabou/kafka-docker-playground/tree/master/connect/connect-ibm-mq-source
+## How to Run
+
+- cd into the directory of this repo and run 
+  `docker-compose up`
+- Once the services will be up and running, you can check the status
+  `docker ps`
+- Connect to the mssql server pod using any of the GUI tool and execute the below commnds to create test data base and tables and insert soem dummy data into it
+also ebales the cdc on database and tables
+
+```
 
 ## MSSQL 
 
@@ -44,9 +51,6 @@ VALUES ('shekar', '456', 'foo', 'frontend');
 INSERT INTO Employees (Name, Id, Manager, Domain)
 VALUES ('foo', '456', 'bar', 'backend');
 
--- =========  
--- Enable a Table Specifying Filegroup Option Template  
--- =========  
 USE test;  
 GO  
   
@@ -62,22 +66,8 @@ EXEC sys.sp_cdc_enable_table
 @role_name     = N'MyRole' 
 GO
 
-EXEC sys.sp_cdc_start_job;  
-GO  
-
-
-
-SELECT name, is_cdc_enabled 
-FROM sys.databases;
-
-SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA;
-
-SELECT * 
-FROM sys.change_tracking_databases 
-WHERE database_id=DB_ID('test');
-
-SELECT s.name AS Schema_Name, tb.name AS Table_Name
-, tb.object_id, tb.type, tb.type_desc, tb.is_tracked_by_cdc
-FROM sys.tables tb
-INNER JOIN sys.schemas s on s.schema_id = tb.schema_id
-WHERE tb.is_tracked_by_cdc = 1;
+```
+- Now its time to run the connectors
+- there is a file named `kafkaconnect.rest` which is a visual studio code plugin to make REST calls. Install the rest client plugin in vs code.
+- You need to make a rest call to kafka connect API to start the connector.
+- Let me know if you face any issues or for any doubts

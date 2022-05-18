@@ -2,7 +2,7 @@
 # @cluster = https://kafkaconnect-jdbc.elisabeth.mytaxi.com
 # @cluster = https://kafkaconnect-surge-price.elisabeth.mytaxi.com
 @cluster = http://localhost:8083
-@connector_name=mssql-debezium-source1
+@connector_name=mssql-debezium-source
 
 
 ###### List the connectors ##########
@@ -49,19 +49,6 @@ POST {{cluster}}/connectors/{{connector_name}}/tasks/0/restart
 
 curl -X DELETE {{cluster}}/connectors/{{connector_name}}
 
-######### Get connector plugins ########
-
-GET {{cluster}}/connector-plugins
-
-######## Validate the provided configuration against configuration definition ########
-
-PUT http://kafkaconnect.fitnessforce.com/connector-plugins/io.debezium.connector.mysql.MySqlConnector/config/validate
-Content-Type: application/json
-Accept: application/json
-
-{
-}
-
 ##############
 
 POST {{cluster}}/connectors
@@ -85,74 +72,3 @@ Accept: application/json
 }
 
 
-
-##############
-
-POST {{cluster}}/connectors
-Content-Type: application/json
-Accept: application/json
-  
-{
-    "name": "salesforce-source-Contact",
-    "config": {
-      "connector.class": "com.github.jcustenborder.kafka.connect.salesforce.SalesforceSourceConnector",
-      "salesforce.username": "ashwin@sastecacademy.com",
-      "salesforce.password": "Dublin4693",
-      "tasks.max": 1,
-      "salesforce.push.topic.name": "ContactPushTopic",
-      "kafka.topic": "SalesforceContact",
-      "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0fwEHQOFCIJUMAyvwS9ICCVqNsDGXQjNv6OY2czF8NdmqNnBUNcdQEJCbKwQ",
-      "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
-      "salesforce.consumer.secret": "F0421FBD0186B7F7E5F4D9B3CFE84E2741ED947A8AEAAF816DAD427864848958",
-      "salesforce.object": "Contact",
-      "salesforce.object.fields": "Id,Email,Name,Phone"
-    }
-  }
-
-##############
-
-POST {{cluster}}/connectors
-Content-Type: application/json
-Accept: application/json
-  
-{
-    "name": "salesforce-source-Lead2",
-    "config": {
-      "connector.class": "com.github.jcustenborder.kafka.connect.salesforce.SalesforceSourceConnector",
-      "salesforce.username": "ashwin@sastecacademy.com",
-      "salesforce.password": "Dublin4693",
-      "tasks.max": 1,
-      "salesforce.push.topic.name": "LeadsPushTopic",
-      "kafka.topic": "SalesforceLead",
-      "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0RIyxzpweU5xxtUfidN8Laqx1EyyK_mZ5itr.cxbf3kEE5gQT66tYfyFij07",
-      "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
-      "salesforce.consumer.secret": "215B4DACC5F881841C7DFCFF3E6D6C113B4255BF10B522B782657FB30FF97ACA",
-      "salesforce.object": "Lead"
-    }
-  }
-
-
-####
-POST {{cluster}}/connectors
-Content-Type: application/json
-Accept: application/json
-
-{
-     "name": "lead-pushtopic",
-     "config": {
-         "connector.class" : "io.confluent.salesforce.SalesforcePushTopicSourceConnector",
-         "tasks.max" : "1",
-         "kafka.topic" : "sfdc-pushtopic-leads",
-         "salesforce.object" : "Lead",
-         "salesforce.push.topic.name" : "LeadsPushTopic",
-        "salesforce.username": "ashwin@sastecacademy.com",
-        "salesforce.password": "Dublin4693",
-        "salesforce.consumer.key": "3MVG9p1Q1BCe9GmDlPd_KOX7K0RIyxzpweU5xxtUfidN8Laqx1EyyK_mZ5itr.cxbf3kEE5gQT66tYfyFij07",
-        "salesforce.password.token": "FrBi8HsDJYQhcNzNEIySrxVOi",
-        "salesforce.consumer.secret": "215B4DACC5F881841C7DFCFF3E6D6C113B4255BF10B522B782657FB30FF97ACA",
-         "salesforce.initial.start" : "all",
-         "confluent.topic.bootstrap.servers": "broker:29092",
-         "confluent.topic.replication.factor": "1",
-         "confluent.license": ""
-     }
- }
