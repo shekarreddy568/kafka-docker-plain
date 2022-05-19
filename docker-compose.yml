@@ -88,6 +88,28 @@ services:
       ACCEPT_EULA: Y
       MSSQL_AGENT_ENABLED: "TRUE"
 
+  akhq:
+      image: tchiotludo/akhq
+      environment:
+        AKHQ_CONFIGURATION: |
+          akhq:
+            connections:
+              docker-kafka-server:
+                properties:
+                  bootstrap.servers: "broker:29092"
+                schema-registry:
+                  url: "http://schema-registry:8081"
+                connect:
+                  - name: "connect"
+                    url: "http://connect:8083"
+
+      ports:
+        - 8080:8080
+      depends_on:
+        - broker
+        - schema-registry
+        - connect
+
 #   mssql:
 #     hostname: mssql
 #     container_name: mssql
