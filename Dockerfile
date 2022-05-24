@@ -3,6 +3,7 @@ FROM confluentinc/cp-kafka-connect-base:7.1.1
 ENV KAFKA_OPTS="-Doracle.jdbc.timezoneAsRegion=false"
 
 RUN confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
+RUN confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:1.7.0
 RUN confluent-hub install --no-prompt debezium/debezium-connector-sqlserver:1.8.1
 # RUN confluent-hub install --no-prompt mongodb/kafka-connect-mongodb:latest
 # RUN confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:latest

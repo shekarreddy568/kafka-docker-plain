@@ -76,17 +76,17 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       CONNECT_PLUGIN_PATH: '/usr/share/java,usr/share/kafka-connect,/usr/share/confluent-hub-components'
 
-  mssql: 
-    hostname: mssql
-    container_name: mssql
-    image: mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
-    ports:
-      - "1433:1433"
-    # user: root
-    environment:
-      SA_PASSWORD: Test@123456789
-      ACCEPT_EULA: Y
-      MSSQL_AGENT_ENABLED: "TRUE"
+  # mssql: 
+  #   hostname: mssql
+  #   container_name: mssql
+  #   image: mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
+  #   ports:
+  #     - "1433:1433"
+  #   # user: root
+  #   environment:
+  #     SA_PASSWORD: Test@123456789
+  #     ACCEPT_EULA: Y
+  #     MSSQL_AGENT_ENABLED: "TRUE"
 
   akhq:
       image: tchiotludo/akhq
