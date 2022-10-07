@@ -6,7 +6,7 @@
   `docker-compose up`
 - Once the services will be up and running, you can check the status
   `docker ps`
-- Connect to the mssql server pod using any of the GUI tool and execute the below commnds to create test data base and tables and insert soem dummy data into it
+- Connect to the mssql server pod using any of the GUI tool and execute the below commnds to create test data base and tables and insert some dummy data into it
 also ebales the cdc on database and tables
 
 ```
