@@ -66,6 +66,24 @@ EXEC sys.sp_cdc_enable_table
 @role_name     = N'MyRole' 
 GO
 
+
+
+UPDATE Employees
+SET Domain = 'marketing'
+WHERE Id = 978;
+
+
+select * from Employees;
+
+SET 'auto.offset.reset'='earliest';
+
+CREATE TABLE IF NOT EXISTS EMPLOYEES WITH (
+    KAFKA_TOPIC = 'mssql_1.dbo.Employees', 
+    VALUE_FORMAT = 'AVRO',
+     KEY_FORMAT = 'AVRO'
+);
+
+
 ```
 - Now its time to run the connectors
 - there is a file named `kafkaconnect.rest` which is a visual studio code plugin to make REST calls. Install the rest client plugin in vs code.
