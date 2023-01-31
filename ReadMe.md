@@ -89,3 +89,10 @@ CREATE TABLE IF NOT EXISTS EMPLOYEES WITH (
 - there is a file named `kafkaconnect.rest` which is a visual studio code plugin to make REST calls. Install the rest client plugin in vs code.
 - You need to make a rest call to kafka connect API to start the connector.
 - Let me know if you face any issues or for any doubts
+
+##############################
+
+
+curl -X POST -H "Content-Type: application/json" \
+  --data "@connect-file-source.json" \
+  http://localhost:8083/connectors | jq

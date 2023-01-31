@@ -3,7 +3,7 @@ version: '3.4'
 services:
   zookeeper:
     platform: linux/amd64
-    image: confluentinc/cp-zookeeper:7.3.0
+    image: confluentinc/cp-zookeeper:7.3.1
     hostname: zookeeper
     container_name: zookeeper
     ports:
@@ -14,7 +14,7 @@ services:
 
   broker:
     platform: linux/amd64
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:7.3.1
     hostname: broker
     container_name: broker
     depends_on:
@@ -33,19 +33,19 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
-  schema-registry:
-    platform: linux/amd64
-    image: confluentinc/cp-schema-registry:7.3.0
-    hostname: schema-registry
-    container_name: schema-registry
-    depends_on:
-      - zookeeper
-      - broker
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+  # schema-registry:
+  #   platform: linux/amd64
+  #   image: confluentinc/cp-schema-registry:7.3.1
+  #   hostname: schema-registry
+  #   container_name: schema-registry
+  #   depends_on:
+  #     - zookeeper
+  #     - broker
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SCHEMA_REGISTRY_HOST_NAME: schema-registry
+  #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
 
   connect:
     platform: linux/amd64
@@ -56,7 +56,7 @@ services:
     depends_on:
       - zookeeper
       - broker
-      - schema-registry
+      # - schema-registry
     ports:
       - "8083:8083"
     environment:
@@ -98,30 +98,37 @@ services:
         - 8080:8080
       depends_on:
         - broker
-        - schema-registry
+        # - schema-registry
         - connect
-        
-  ksqldb-server:
-    platform: linux/amd64
-    image: confluentinc/ksqldb-server:0.28.2
-    hostname: ksqldb-server
-    container_name: ksqldb-server
-    depends_on:
-      - zookeeper
-      - broker
-      - schema-registry
-      - connect
-    ports:
-      - "8088:8088"
-    environment:
-      KSQL_LISTENERS: http://0.0.0.0:8088
-      KSQL_BOOTSTRAP_SERVERS: broker:29092
-      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
-      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
-      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
-      KSQL_KSQL_INTERNAL_TOPIC_REPLICAS: 1
-      KSQL_KSQL_STREAMS_NUM_STANDBY_REPLICAS: 1
+
+  cassandra:
+    image: cassandra:latest
+    hostname: cassandra
+    container_name: cassandra
+    # ports:
+    #   - "7000:7000"
+
+  # ksqldb-server:
+  #   platform: linux/amd64
+  #   image: confluentinc/ksqldb-server:0.28.2
+  #   hostname: ksqldb-server
+  #   container_name: ksqldb-server
+  #   depends_on:
+  #     - zookeeper
+  #     - broker
+  #     - schema-registry
+  #     - connect
+  #   ports:
+  #     - "8088:8088"
+  #   environment:
+  #     KSQL_LISTENERS: http://0.0.0.0:8088
+  #     KSQL_BOOTSTRAP_SERVERS: broker:29092
+  #     KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+  #     KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+  #     KSQL_KSQL_INTERNAL_TOPIC_REPLICAS: 1
+  #     KSQL_KSQL_STREAMS_NUM_STANDBY_REPLICAS: 1
 
 #   mssql:
 #     hostname: mssql
