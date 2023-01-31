@@ -2,7 +2,7 @@
 # @cluster = https://kafkaconnect-jdbc.elisabeth.mytaxi.com
 # @cluster = https://kafkaconnect-surge-price.elisabeth.mytaxi.com
 @cluster = http://localhost:8083
-@connector_name=mssql-debezium-source
+@connector_name=cassandraSinkConnector1
 
 
 ###### List the connectors ##########
@@ -60,27 +60,15 @@ Content-Type: application/json
 Accept: application/json
   
 {
-    "name": "mssql-debezium-source6",
-    "config": {
-      "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector", 
-      "database.hostname": "mssql", 
-      "database.port": "1433", 
-      "database.user": "sa", 
-      "database.password": "Test@123456789", 
-      "database.dbname": "test", 
-      "database.server.name": "mssql_1", 
-      "table.include.list": "dbo.Employees", 
-      "database.history.kafka.bootstrap.servers": "broker:29092", 
-      "database.history.kafka.topic": "dbhistory.mssql_1",
-      "transforms": "unwrap",
-      "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
-      "transforms.extractkey.type": "org.apache.kafka.connect.transforms.ExtractField$Key",
-      "transforms.extractkey.field": "Id",
-      "key.converter": "io.confluent.connect.avro.AvroConverter",
-      "key.converter.schema.registry.url": "http://schema-registry:8081",
-      "value.converter": "io.confluent.connect.avro.AvroConverter",
-      "value.converter.schema.registry.url": "http://schema-registry:8081"
+    "name" : "cassandraSinkConnector1",
+    "config" : {
+      "connector.class" : "io.confluent.connect.cassandra.CassandraSinkConnector",
+      "tasks.max" : "1",
+      "topics" : "topic1,topic2,topic3",
+      "cassandra.contact.points" : "cassandra",
+      "cassandra.keyspace" : "test",
+      "cassandra.local.datacenter": "datacenter1",
+      "confluent.topic.bootstrap.servers": "broker:29092"
     }
-}
-
+  }
 

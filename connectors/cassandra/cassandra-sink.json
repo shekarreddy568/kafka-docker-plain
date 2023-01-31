@@ -1,10 +1,13 @@
 {
-    "name" : "cassandraSinkConnector1",
-    "config" : {
-      "connector.class" : "io.confluent.connect.cassandra.CassandraSinkConnector",
-      "tasks.max" : "1",
-      "topics" : "topic1,topic2,topic3",
-      "cassandra.contact.points" : "cassandra",
-      "cassandra.keyspace" : "test"
-    }
+  "name" : "cassandraSinkConnector1",
+  "config" : {
+    "connector.class" : "io.confluent.connect.cassandra.CassandraSinkConnector",
+    "tasks.max" : "1",
+    "topics" : "topic1,topic2,topic3",
+    "cassandra.contact.points" : "cassandra",
+    "cassandra.keyspace" : "test",
+    "cassandra.local.datacenter": "datacenter1",
+    "confluent.topic.bootstrap.servers": "broker:29092"
   }
+}
+
