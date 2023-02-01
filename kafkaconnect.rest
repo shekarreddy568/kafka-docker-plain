@@ -2,7 +2,7 @@
 # @cluster = https://kafkaconnect-jdbc.elisabeth.mytaxi.com
 # @cluster = https://kafkaconnect-surge-price.elisabeth.mytaxi.com
 @cluster = http://localhost:8083
-@connector_name=cassandraSinkConnector1
+@connector_name=CsvSpoolDir
 
 
 ###### List the connectors ##########
@@ -45,13 +45,8 @@ curl {{cluster}}/connectors/{{connector_name}}/tasks
 
 POST {{cluster}}/connectors/{{connector_name}}/tasks/0/restart
 
-      "transforms.extractkey.type": "org.apache.kafka.connect.transforms.ExtractField$Key",
-      "transforms.extractkey.field": "Id",
-      "key.converter": "org.apache.kafka.connect.converters.IntegerConverter",
-
-
 ###### Delete a Connector ###########
-curl -X DELETE {{cluster}}/connectors/mssql-debezium-source6
+curl -X DELETE {{cluster}}/connectors/{{connector_name}}
 
 ##############
 
@@ -60,15 +55,39 @@ Content-Type: application/json
 Accept: application/json
   
 {
-    "name" : "cassandraSinkConnector1",
-    "config" : {
-      "connector.class" : "io.confluent.connect.cassandra.CassandraSinkConnector",
-      "tasks.max" : "1",
-      "topics" : "topic1,topic2,topic3",
-      "cassandra.contact.points" : "cassandra",
-      "cassandra.keyspace" : "test",
-      "cassandra.local.datacenter": "datacenter1",
-      "confluent.topic.bootstrap.servers": "broker:29092"
-    }
+  "name" : "cassandraSinkConnector1",
+  "config" : {
+    "connector.class" : "io.confluent.connect.cassandra.CassandraSinkConnector",
+    "tasks.max" : "1",
+    "topics" : "cities",
+    "cassandra.contact.points" : "cassandra",
+    "cassandra.keyspace" : "test",
+    "cassandra.local.datacenter": "datacenter1",
+    "confluent.topic.bootstrap.servers": "broker:29092",
+    "transforms":"copyFieldToKey",
+    "transforms.copyFieldToKey.type":"org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.copyFieldToKey.fields":"City"
   }
+}
 
+##############
+
+POST {{cluster}}/connectors
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "CsvSpoolDir",
+    "config": {
+      "tasks.max": "1",
+      "connector.class": "com.github.jcustenborder.kafka.connect.spooldir.SpoolDirCsvSourceConnector",
+      "input.path": "/data/filestream",
+      "input.file.pattern": "cities.csv",
+      "error.path": "/tmp",
+      "finished.path": "/tmp",
+      "halt.on.error": "false",
+      "topic": "cities",
+      "csv.first.row.as.header": "true",
+      "schema.generation.enabled": "true"
+    }
+}

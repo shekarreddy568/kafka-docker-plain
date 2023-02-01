@@ -96,3 +96,12 @@ CREATE TABLE IF NOT EXISTS EMPLOYEES WITH (
 curl -X POST -H "Content-Type: application/json" \
   --data "@connect-file-source.json" \
   http://localhost:8083/connectors | jq
+
+
+ALTER KEYSPACE test WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+
+
+ mkdir /tmp/error
+ mkdir /tmp/finished
+ echo "1,2,3,4" > test.csv
+ echo "5,6,7,8" >> test.csv

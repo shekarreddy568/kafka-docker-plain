@@ -35,19 +35,19 @@ services:
       KAFKA_CONFLUENT_LICENSE_REPLICATION_FACTOR: 1
       KAFKA_CONFLUENT_LICENSE_ADMIN_REPLICATION_FACTOR: 1
 
-  # schema-registry:
-  #   platform: linux/amd64
-  #   image: confluentinc/cp-schema-registry:7.3.1
-  #   hostname: schema-registry
-  #   container_name: schema-registry
-  #   depends_on:
-  #     - zookeeper
-  #     - broker
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     SCHEMA_REGISTRY_HOST_NAME: schema-registry
-  #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+  schema-registry:
+    platform: linux/amd64
+    image: confluentinc/cp-schema-registry:7.3.1
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - zookeeper
+      - broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
 
   connect:
     platform: linux/amd64
@@ -58,7 +58,7 @@ services:
     depends_on:
       - zookeeper
       - broker
-      # - schema-registry
+      - schema-registry
     ports:
       - "8083:8083"
     environment:
@@ -80,6 +80,10 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       CONNECT_PLUGIN_PATH: '/usr/share/java,usr/share/kafka-connect,/usr/share/confluent-hub-components'
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    volumes:
+      - "./connectors:/data"
 
   akhq:
       image: tchiotludo/akhq
@@ -100,15 +104,25 @@ services:
         - 8080:8080
       depends_on:
         - broker
-        # - schema-registry
+        - schema-registry
         - connect
 
   cassandra:
     image: cassandra:latest
     hostname: cassandra
     container_name: cassandra
-    # ports:
-    #   - "7000:7000"
+
+  # kcat:
+  #   image: edenhill/kcat:1.7.1
+  #   container_name: kcat
+  #   links:
+  #     - broker
+  #   entrypoint:
+  #     - /bin/sh
+  #     - -c
+  #     - |
+  #       apk add jq;
+  #       while [ 1 -eq 1 ];do sleep 60;done
 
   # ksqldb-server:
   #   platform: linux/amd64

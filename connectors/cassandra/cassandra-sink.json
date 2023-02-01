@@ -7,7 +7,10 @@
     "cassandra.contact.points" : "cassandra",
     "cassandra.keyspace" : "test",
     "cassandra.local.datacenter": "datacenter1",
-    "confluent.topic.bootstrap.servers": "broker:29092"
+    "confluent.topic.bootstrap.servers": "broker:29092",
+    "transforms":"copyFieldToKey,extractKeyFromStruct",
+    "transforms.copyFieldToKey.type":"org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.copyFieldToKey.fields":"id"
   }
 }
 
