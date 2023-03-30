@@ -82,6 +82,8 @@ services:
       CONNECT_PLUGIN_PATH: '/usr/share/java,usr/share/kafka-connect,/usr/share/confluent-hub-components'
       CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+      CLASSPATH: /usr/share/confluent-hub-components/*
+      CONNECT_REST_EXTENSION_CLASSES: "com.test.kafka.connect.restextensions.ValidateConnectorConfig"
     volumes:
       - "./connectors:/data"
 
@@ -107,10 +109,10 @@ services:
         - schema-registry
         - connect
 
-  cassandra:
-    image: cassandra:latest
-    hostname: cassandra
-    container_name: cassandra
+  # cassandra:
+  #   image: cassandra:latest
+  #   hostname: cassandra
+  #   container_name: cassandra
 
   # kcat:
   #   image: edenhill/kcat:1.7.1

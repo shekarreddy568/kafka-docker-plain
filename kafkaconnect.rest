@@ -46,7 +46,7 @@ curl {{cluster}}/connectors/{{connector_name}}/tasks
 POST {{cluster}}/connectors/{{connector_name}}/tasks/0/restart
 
 ###### Delete a Connector ###########
-curl -X DELETE {{cluster}}/connectors/{{connector_name}}
+curl -X DELETE {{cluster}}/connectors/CsvSpoolDir
 
 ##############
 

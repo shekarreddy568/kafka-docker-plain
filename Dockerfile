@@ -11,8 +11,10 @@ ENV KAFKA_OPTS="-Doracle.jdbc.timezoneAsRegion=false"
 # RUN confluent-hub install --no-prompt confluentinc/kafka-connect-salesforce:latest
 # RUN confluent-hub install --no-prompt confluentinc/kafka-connect-ibmmq:latest
 # RUN confluent-hub install --no-prompt confluentinc/kafka-connect-ibmmq-sink:latest
-RUN confluent-hub install --no-prompt confluentinc/kafka-connect-cassandra:latest
+# RUN confluent-hub install --no-prompt confluentinc/kafka-connect-cassandra:latest
 RUN confluent-hub install --no-prompt jcustenborder/kafka-connect-spooldir:latest
+
+COPY jars/kafkaconnect-rest-extension_3-0.1.0-SNAPSHOT.jar /usr/share/confluent-hub-components/kafkaconnect-rest-extension_3-0.1.0-SNAPSHOT.jar
 
 # COPY jars/ibmmq/wmq/JavaSE/lib/ /usr/share/confluent-hub-components/confluentinc-kafka-connect-ibmmq/lib/
 # COPY jars/ibmmq/wmq/JavaSE/lib/ /usr/share/confluent-hub-components/confluentinc-kafka-connect-ibmmq-sink/lib/
