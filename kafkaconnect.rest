@@ -98,30 +98,3 @@ Content-Type: application/json
 Accept: application/json
 Authorization: Basic mep-super-user:3CgV&fB$9ajEy+:R
 
-{
-  "connector.class": "io.confluent.connect.rabbitmq.RabbitMQSourceConnector",
-  "producer.override.buffer.memory": "67108890",
-  "tasks.max": "1",
-  "transforms": "largeMessagesRouter,headerTransformer",
-  "rabbitmq.security.protocol": "SSL",
-  "rabbitmq.username": "mep",
-  "transforms.largeMessagesRouter.tolerate.topic": "mep.internal.esb-rabbitmq-bridge-cluster.large-messages.v2",
-  "rabbitmq.host": "esb-test.int.kn",
-  "value.converter": "io.confluent.connect.avro.AvroConverter",
-  "key.converter": "io.confluent.connect.avro.AvroConverter",
-  "transforms.largeMessagesRouter.size.limit.bytes": "67108864",
-  "rabbitmq.password": "qrb-y8gvxrd$r1LG",
-  "rabbitmq.queue": "c.mep.dev-platform.test.queue",
-  "transforms.headerTransformer.type": "com.kn.knite.mep.transforms.RabbitMQHeaderTransformation",
-  "rabbitmq.virtual.host": "esb-test",
-  "key.converter.schemas.enable": "false",
-  "value.converter.schema.registry.url": "http://schemaregistry.confluent.svc.cluster.local:8081",
-  "rabbitmq.port": "5671",
-  "transforms.largeMessagesRouter.type": "com.kn.knite.mep.transforms.LargeMessageRouter",
-  "value.converter.schemas.enable": "false",
-  "name": "kn.client6sa.testconnector",
-  "kafka.topic": "mig.esb-rabbitmq.dev-platform.test.queue2",
-  "principal.service.name": "mep-super-user",
-  "principal.service.password": "3CgV&fB$9ajEy+:R",
-  "key.converter.schema.registry.url": "http://schemaregistry.confluent.svc.cluster.local:8081"
-}
