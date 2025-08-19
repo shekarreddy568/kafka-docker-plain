@@ -1,274 +1,121 @@
----
-version: '3.4'
 services:
-
-  broker:
-    platform: linux/amd64
-    image: confluentinc/cp-kafka:7.5.3
-    hostname: broker
-    container_name: broker
+  # Kafka with KRaft (no Zookeeper)
+  kafka:
+    image: apache/kafka:3.7.0
+    hostname: kafka
+    container_name: kafka
     ports:
       - "9092:9092"
-      - "9101:9101"
     environment:
       KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      CLUSTER_ID: '8dfW7xZLSRaSgsQ4Z_xhHw'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  schema-registry:
-    platform: linux/amd64
-    image: confluentinc/cp-schema-registry:7.5.3
-    hostname: schema-registry
-    container_name: schema-registry
-    depends_on:
-      - broker
+  # MySQL Database with binlog configuration
+  mysql:
+    image: mysql:8.0
+    hostname: mysql
+    container_name: mysql
     ports:
-      - "8081:8081"
+      - "3306:3306"
     environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      MYSQL_ROOT_PASSWORD: debezium
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpw
+      MYSQL_DATABASE: inventory
+    command:
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=row
+      - --binlog-row-image=full
+      - --expire-logs-days=10
+      - --binlog-do-db=inventory
+      - --gtid-mode=on
+      - --enforce-gtid-consistency=on
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdebezium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # connect:
-  #   platform: linux/amd64
-  #   build: .
-  #   image: confluentinc/cp-kafka-connect-custom:latest
-  #   hostname: connect
-  #   depends_on:
-  #     - broker
-  #     - schema-registry
-  #   ports:
-  #     - "8083:8083"
-  #   environment:
-  #     CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
-  #     CONNECT_REST_ADVERTISED_HOST_NAME: connect
-  #     CONNECT_GROUP_ID: compose-connect-group
-  #     CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
-  #     CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-  #     CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
-  #     CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
-  #     CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-  #     CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-  #     CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-  #     CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-  #     CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-  #     CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-  #     CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
-  #     CONNECT_PLUGIN_PATH: '/usr/share/java,usr/share/kafka-connect,/usr/share/confluent-hub-components'
-  #     CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
-  #     CLASSPATH: /usr/share/confluent-hub-components/*
+  # Kafka Connect with Debezium
+  connect:
+    image: debezium/connect:2.4
+    hostname: connect
+    container_name: connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+      CONNECT_PLUGIN_PATH: /kafka/connect
+    volumes:
+      - connect-data:/kafka/connect
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  # ksqldb-server:
-  #   image: confluentinc/cp-ksqldb-server:7.5.3
-  #   hostname: ksqldb-server
-  #   container_name: ksqldb-server
-  #   depends_on:
-  #     - broker
-  #     - connect
-  #   ports:
-  #     - "8088:8088"
-  #   environment:
-  #     KSQL_CONFIG_DIR: "/etc/ksql"
-  #     KSQL_BOOTSTRAP_SERVERS: "broker:29092"
-  #     KSQL_HOST_NAME: ksqldb-server
-  #     KSQL_LISTENERS: "http://0.0.0.0:8088"
-  #     KSQL_CACHE_MAX_BYTES_BUFFERING: 0
-  #     KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-  #     KSQL_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
-  #     KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
-  #     KSQL_KSQL_CONNECT_URL: "http://connect:8083"
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
-  #     KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+  # Kafka UI for monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    hostname: kafka-ui
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+      connect:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
 
-  # ksqldb-cli:
-  #   image: confluentinc/cp-ksqldb-cli:7.5.3
-  #   container_name: ksqldb-cli
-  #   depends_on:
-  #     - broker
-  #     - connect
-  #     - ksqldb-server
-  #   entrypoint: /bin/sh
-  #   tty: true
-      
-  # akhq:
-  #     image: tchiotludo/akhq
-  #     environment:
-  #       AKHQ_CONFIGURATION: |
-  #         akhq:
-  #           connections:
-  #             docker-kafka-server:
-  #               properties:
-  #                 bootstrap.servers: "broker:29092"
-  #               schema-registry:
-  #                 url: "http://schema-registry:8081"
-  #               connect:
-  #                 - name: "connect"
-  #                   url: "http://connect:8083"
-
-  #     ports:
-  #       - 8080:8080
-  #     depends_on:
-  #       - broker
-  #       - schema-registry
-  #       - connect
-
-  # cassandra:
-  #   image: cassandra:latest
-  #   hostname: cassandra
-  #   container_name: cassandra
-
-  # kcat:
-  #   image: edenhill/kcat:1.7.1
-  #   container_name: kcat
-  #   links:
-  #     - broker
-  #   entrypoint:
-  #     - /bin/sh
-  #     - -c
-  #     - |
-  #       apk add jq;
-  #       while [ 1 -eq 1 ];do sleep 60;done
-
-  # ksqldb-server:
-  #   platform: linux/amd64
-  #   image: confluentinc/ksqldb-server:0.28.2
-  #   hostname: ksqldb-server
-  #   container_name: ksqldb-server
-  #   depends_on:
-  #     - zookeeper
-  #     - broker
-  #     - schema-registry
-  #     - connect
-  #   ports:
-  #     - "8088:8088"
-  #   environment:
-  #     KSQL_LISTENERS: http://0.0.0.0:8088
-  #     KSQL_BOOTSTRAP_SERVERS: broker:29092
-  #     KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-  #     KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
-  #     KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
-  #     KSQL_KSQL_INTERNAL_TOPIC_REPLICAS: 1
-  #     KSQL_KSQL_STREAMS_NUM_STANDBY_REPLICAS: 1
-
-#   mssql:
-#     hostname: mssql
-#     container_name: mssql
-#     image: mcr.microsoft.com/azure-sql-edge
-#     ports:
-#       - "1433:1433"
-#     volumes:
-#       - mssql:/var/opt/mssql/data
-#     user: root
-#     environment:
-#       MSSQL_SA_PASSWORD: Test@123456789
-#       ACCEPT_EULA: 1
-#       MSSQL_AGENT_ENABLED: "TRUE"
-
-# volumes:
-#   mssql:
-
-  # mysql:
-  #   image: mysql:8.0
-  #   hostname: mysql
-  #   container_name: mysql
-  #   depends_on:
-  #     - connect
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: confluent 
-  #     MYSQL_USER: confluent 
-  #     MYSQL_PASSWORD: confluent 
-  #     MYSQL_DATABASE: connect_test
-
-  # ibmmq:
-  #   image: ibmcom/mq # https://hub.docker.com/r/ibmcom/mq/
-  #   hostname: ibmmq
-  #   container_name: ibmmq
-  #   environment:
-  #     LICENSE: accept
-  #     MQ_QMGR_NAME: QM1
-  #     MQ_ADMIN_PASSWORD: passw0rd
-  #     MQ_APP_PASSWORD: passw0rd
-    # volumes:
-    #     - ../../connect/connect-ibm-mq-source/security/snakeoil-ca-1.crt:/etc/mqm/pki/keys/mykey/ca.crt
-    #     - ../../connect/connect-ibm-mq-source/security/ibmmq.certificate.pem:/etc/mqm/pki/keys/mykey/tls.crt
-    #     - ../../connect/connect-ibm-mq-source/security/ibmmq.key:/etc/mqm/pki/keys/mykey/tls.key
-    # ports:
-    #   - '1414:1414'
-    #   - '9443:9443'
-
-  # ksqldb-cli:
-  #   image: confluentinc/ksqldb-cli:0.15.0
-  #   container_name: ksqldb-cli
-  #   depends_on:
-  #     - broker
-  #     - ksqldb-server
-  #   entrypoint: /bin/sh
-  #   tty: true
-
-  # # MongoDB Replica Set
-  #   mongo1:
-  #     image: "mongo:latest"
-  #     hostname: mongo1
-  #     container_name: mongo1
-  #     command: --replSet rs0 --oplogSize 128
-  #     volumes:
-  #       - rs1:/data/db
-  #     ports:
-  #       - "27017:27017"
-  #     restart: always
-  #   mongo2:
-  #     image: "mongo:latest"
-  #     hostname: mongo2
-  #     container_name: mongo2
-  #     command: --replSet rs0 --oplogSize 128
-  #     volumes:
-  #       - rs2:/data/db
-  #     ports:
-  #       - "27018:27017"
-  #     restart: always
-  #   mongo3:
-  #     image: "mongo:latest"
-  #     hostname: mongo3
-  #     container_name: mongo3
-  #     command: --replSet rs0 --oplogSize 128
-  #     volumes:
-  #       - rs3:/data/db
-  #     ports:
-  #       - "27019:27017"
-  #     restart: always    
-
-  # volumes:
-  #   rs1:
-  #   rs2:
-  #   rs3:
-
-  # postgres:
-  #   image: postgres:latest
-  #   hostname: postgres
-  #   container_name: postgres
-  #   environment:
-  #     POSTGRES_PASSWORD: confluent 
-
-  # postgres:
-  #   image: centos/postgresql-10-centos7:latest
-  #   hostname: postgres
-  #   container_name: postgres
-  #   ports:
-  #     - "5432:5432"
-  #   environment:
-  #     POSTGRESQL_ADMIN_PASSWORD: postgres
+volumes:
+  kafka-data:
+  mysql-data:
+  connect-data:

@@ -1,107 +1,717 @@
-# kafka-docker-plain
+# Debezium MySQL CDC with Kafka KRaft and Signalling - Complete Guide
 
-## How to Run
+This comprehensive guide demonstrates how to set up a complete Debezium MySQL CDC pipeline with Kafka KRaft (no Zookeeper) and use the signalling mechanism to add new tables without replaying existing data.
 
-- cd into the directory of this repo and run 
-  `docker-compose up`
-- Once the services will be up and running, you can check the status
-  `docker ps`
-- Connect to the mssql server pod using any of the GUI tool and execute the below commnds to create test data base and tables and insert some dummy data into it
-also ebales the cdc on database and tables
+## 🎯 What This Demonstrates
 
-```
+- **Kafka KRaft Mode**: Running Kafka without Zookeeper dependency
+- **Initial CDC Setup**: Capturing changes from initial set of tables
+- **Dynamic Table Addition**: Adding new tables to existing connector using signalling
+- **No Data Replay**: Ensuring existing tables don't replay data when new tables are added
+- **Incremental Snapshots**: Capturing existing data from new tables only
+- **Real-time CDC**: Continuous change data capture for all tables
 
-## MSSQL 
-
-Create database test;
-
-Use test;
-GO  
-EXEC sys.sp_cdc_enable_db  
-GO 
-
-CREATE TABLE Persons (
-    PersonID int,
-    LastName varchar(255),
-    FirstName varchar(255),
-    Address varchar(255),
-    City varchar(255)
-);
-
-
-INSERT INTO Persons (PersonID, LastName, FirstName, Address, City)
-VALUES (123, 'foo', 'bar', 'India', 'hyderabad');
-
-INSERT INTO Persons (PersonID, LastName, FirstName, Address, City)
-VALUES (456, 'raj', 'shekar', 'Germany', 'Hamburg');
-
-CREATE TABLE Employees (
-    Name varchar(255),
-    Id Int,
-    Manager varchar(255),
-    Domain varchar(255)
-);
-
-INSERT INTO Employees (Name, Id, Manager, Domain)
-VALUES ('Raj', '123', 'foo', 'data');
-
-INSERT INTO Employees (Name, Id, Manager, Domain)
-VALUES ('shekar', '456', 'foo', 'frontend');
-
-INSERT INTO Employees (Name, Id, Manager, Domain)
-VALUES ('foo', '456', 'bar', 'backend');
-
-USE test;  
-GO  
-  
-EXEC sys.sp_cdc_enable_table  
-@source_schema = N'dbo',  
-@source_name   = N'Employees',  
-@role_name     = N'MyRole' 
-GO
-
-EXEC sys.sp_cdc_enable_table  
-@source_schema = N'dbo',  
-@source_name   = N'Persons',  
-@role_name     = N'MyRole' 
-GO
-
-
-
-UPDATE Employees
-SET Domain = 'marketing'
-WHERE Id = 978;
-
-
-select * from Employees;
-
-SET 'auto.offset.reset'='earliest';
-
-CREATE TABLE IF NOT EXISTS EMPLOYEES WITH (
-    KAFKA_TOPIC = 'mssql_1.dbo.Employees', 
-    VALUE_FORMAT = 'AVRO',
-     KEY_FORMAT = 'AVRO'
-);
-
+## 🏗️ Architecture
 
 ```
-- Now its time to run the connectors
-- there is a file named `kafkaconnect.rest` which is a visual studio code plugin to make REST calls. Install the rest client plugin in vs code.
-- You need to make a rest call to kafka connect API to start the connector.
-- Let me know if you face any issues or for any doubts
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   MySQL 8.0     │    │  Kafka KRaft    │    │  Kafka Connect  │
+│   (Source DB)   │───▶│   (Broker)      │───▶│   (Debezium)    │
+│   + Binlog      │    │   + Topics      │    │   + Signalling  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Signal Table    │    │   Kafka UI      │    │   CDC Topics    │
+│ (debezium_      │    │  (Monitoring)   │    │  (Data Stream)  │
+│  signal)        │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-##############################
+## 📋 Prerequisites
 
+- Docker and Docker Compose installed
+- Basic understanding of Kafka, MySQL, and CDC concepts
+- `curl` and `jq` for API interactions (optional but recommended)
 
-curl -X POST -H "Content-Type: application/json" \
-  --data "@connect-file-source.json" \
-  http://localhost:8083/connectors | jq
+## 🚀 Quick Start
 
+### Step 1: Clone or Create Project Structure
 
-ALTER KEYSPACE test WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+```bash
+mkdir debezium-kafka-kraft-signalling
+cd debezium-kafka-kraft-signalling
+```
 
+### Step 2: Start the Environment
 
- mkdir /tmp/error
- mkdir /tmp/finished
- echo "1,2,3,4" > test.csv
- echo "5,6,7,8" >> test.csv
+```bash
+# Start all services
+docker compose up -d
+
+# Verify all services are healthy
+docker compose ps
+```
+
+Expected output:
+```
+NAME       IMAGE                           STATUS
+connect    debezium/connect:2.4            Up (healthy)
+kafka      apache/kafka:3.7.0              Up (healthy)
+kafka-ui   provectuslabs/kafka-ui:latest   Up
+mysql      mysql:8.0                       Up (healthy)
+```
+
+### Step 3: Deploy Initial Connector
+
+```bash
+# Deploy connector for initial tables (customers, products)
+chmod +x deploy-initial-connector.sh
+./deploy-initial-connector.sh
+```
+
+### Step 4: Verify Initial Setup
+
+- Open Kafka UI: http://localhost:8080
+- Check topics: `dbserver1.inventory.customers` and `dbserver1.inventory.products`
+- Verify initial data is captured
+
+### Step 5: Add New Tables with Signalling
+
+```bash
+# Add orders and order_items tables without replaying existing data
+chmod +x update-connector-with-signalling.sh
+./update-connector-with-signalling.sh
+```
+
+### Step 6: Test Real-time CDC
+
+```bash
+# Test with sample data changes
+chmod +x test-cdc-changes.sh
+./test-cdc-changes.sh
+```
+
+### Step 7: Monitor the Process
+
+```bash
+# Monitor signalling and connector status
+chmod +x monitor-signalling.sh
+./monitor-signalling.sh
+```
+
+## 📁 Complete File Structure
+
+```
+debezium-kafka-kraft-signalling/
+├── docker-compose.yml                    # Main orchestration file
+├── mysql-init/
+│   └── 01-init.sql                      # Database initialization
+├── initial-connector.json               # Initial connector config
+├── updated-connector-config.json        # Updated connector config
+├── deploy-initial-connector.sh          # Deploy initial connector
+├── update-connector-with-signalling.sh  # Add tables with signalling
+├── test-cdc-changes.sh                  # Test CDC functionality
+├── monitor-signalling.sh                # Monitor the process
+├── README.md                            # This comprehensive guide
+└── VERIFICATION_SUMMARY.md              # Results summary
+```
+
+## 🔧 Detailed Configuration Files
+
+### 1. Docker Compose Configuration
+
+<details>
+<summary>Click to expand docker-compose.yml</summary>
+
+```yaml
+services:
+  # Kafka with KRaft (no Zookeeper)
+  kafka:
+    image: apache/kafka:3.7.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MySQL Database with binlog configuration
+  mysql:
+    image: mysql:8.0
+    hostname: mysql
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: debezium
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpw
+      MYSQL_DATABASE: inventory
+    command:
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=row
+      - --binlog-row-image=full
+      - --expire-logs-days=10
+      - --binlog-do-db=inventory
+      - --gtid-mode=on
+      - --enforce-gtid-consistency=on
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdebezium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Connect with Debezium
+  connect:
+    image: debezium/connect:2.4
+    hostname: connect
+    container_name: connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+      CONNECT_PLUGIN_PATH: /kafka/connect
+    volumes:
+      - connect-data:/kafka/connect
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kafka UI for monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    hostname: kafka-ui
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+      connect:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+
+volumes:
+  kafka-data:
+  mysql-data:
+  connect-data:
+```
+
+</details>
+
+### 2. MySQL Database Initialization
+
+<details>
+<summary>Click to expand mysql-init/01-init.sql</summary>
+
+```sql
+-- Create the inventory database
+USE inventory;
+
+-- Create initial tables (these will be in the first connector configuration)
+CREATE TABLE customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create additional tables (these will be added later via signalling)
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+CREATE TABLE order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Create the signalling table for Debezium
+CREATE TABLE debezium_signal (
+    id VARCHAR(42) PRIMARY KEY,
+    type VARCHAR(32) NOT NULL,
+    data TEXT NULL
+);
+
+-- Insert sample data into initial tables
+INSERT INTO customers (first_name, last_name, email) VALUES
+('John', 'Doe', 'john.doe@example.com'),
+('Jane', 'Smith', 'jane.smith@example.com'),
+('Bob', 'Johnson', 'bob.johnson@example.com');
+
+INSERT INTO products (name, description, price, stock_quantity) VALUES
+('Laptop', 'High-performance laptop', 999.99, 50),
+('Mouse', 'Wireless optical mouse', 29.99, 200),
+('Keyboard', 'Mechanical keyboard', 79.99, 100);
+
+-- Insert sample data into additional tables (for later testing)
+INSERT INTO orders (customer_id, total_amount, status) VALUES
+(1, 1029.98, 'pending'),
+(2, 109.98, 'processing'),
+(3, 29.99, 'shipped');
+
+INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
+(1, 1, 1, 999.99),
+(1, 2, 1, 29.99),
+(2, 3, 1, 79.99),
+(2, 2, 1, 29.99),
+(3, 2, 1, 29.99);
+
+-- Grant necessary privileges for Debezium
+GRANT SELECT, RELOAD, SHOW DATABASES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'mysqluser'@'%';
+GRANT ALL PRIVILEGES ON inventory.* TO 'mysqluser'@'%';
+FLUSH PRIVILEGES;
+```
+
+</details>
+
+### 3. Initial Connector Configuration
+
+<details>
+<summary>Click to expand initial-connector.json</summary>
+
+```json
+{
+  "name": "inventory-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "database.hostname": "mysql",
+    "database.port": "3306",
+    "database.user": "mysqluser",
+    "database.password": "mysqlpw",
+    "database.server.id": "184054",
+    "topic.prefix": "dbserver1",
+    "database.include.list": "inventory",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",
+    "schema.history.internal.kafka.topic": "schema-changes.inventory",
+    "include.schema.changes": "true",
+    
+    "table.include.list": "inventory.customers,inventory.products",
+    
+    "snapshot.mode": "initial",
+    "snapshot.locking.mode": "minimal",
+    
+    "signal.kafka.topic": "dbserver1.inventory.debezium_signal",
+    "signal.kafka.bootstrap.servers": "kafka:29092",
+    "signal.data.collection": "inventory.debezium_signal",
+    "signal.enabled.channels": "source,kafka",
+    
+    "incremental.snapshot.chunk.size": "1024",
+    "incremental.snapshot.allow.schema.changes": "true",
+    
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite",
+    "transforms.unwrap.add.fields": "op,ts_ms,source.ts_ms",
+    
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
+  }
+}
+```
+
+</details>
+
+## 📝 Step-by-Step Detailed Process
+
+### Phase 1: Environment Setup
+
+#### 1.1 Create Project Directory
+```bash
+mkdir debezium-kafka-kraft-signalling
+cd debezium-kafka-kraft-signalling
+```
+
+#### 1.2 Create All Configuration Files
+Create all the files as shown in the file structure above.
+
+#### 1.3 Start Services
+```bash
+docker compose up -d
+```
+
+#### 1.4 Verify Services Health
+```bash
+# Check all services are running
+docker compose ps
+
+# Check individual service logs if needed
+docker compose logs kafka
+docker compose logs mysql
+docker compose logs connect
+```
+
+### Phase 2: Initial Connector Deployment
+
+#### 2.1 Wait for Services to be Ready
+```bash
+# Wait for Kafka Connect to be ready
+while ! curl -f -s http://localhost:8083/connectors > /dev/null; do
+    echo "Waiting for Kafka Connect..."
+    sleep 5
+done
+```
+
+#### 2.2 Deploy Initial Connector
+```bash
+curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" \
+  http://localhost:8083/connectors/ \
+  -d @initial-connector.json
+```
+
+#### 2.3 Verify Initial Connector
+```bash
+# Check connector status
+curl -s http://localhost:8083/connectors/inventory-connector/status | jq '.'
+
+# List available topics
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# Check initial data capture
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.customers \
+  --from-beginning --max-messages 3
+```
+
+Expected topics after initial setup:
+- `dbserver1.inventory.customers`
+- `dbserver1.inventory.products`
+- `dbserver1.inventory.debezium_signal`
+
+### Phase 3: Adding New Tables with Signalling
+
+#### 3.1 Update Connector Configuration
+```bash
+curl -i -X PUT -H "Accept:application/json" -H "Content-Type:application/json" \
+  http://localhost:8083/connectors/inventory-connector/config \
+  -d @updated-connector-config.json
+```
+
+#### 3.2 Verify Configuration Update
+```bash
+# Check connector is still running
+curl -s http://localhost:8083/connectors/inventory-connector/status | jq '.connector.state'
+
+# Verify new table list in configuration
+curl -s http://localhost:8083/connectors/inventory-connector/config | jq '.["table.include.list"]'
+```
+
+#### 3.3 Trigger Incremental Snapshot via Signalling
+```bash
+# Generate unique signal ID
+SIGNAL_ID=$(date +%s)
+
+# Insert signal to trigger incremental snapshot
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "
+INSERT INTO debezium_signal (id, type, data) VALUES 
+('snapshot-${SIGNAL_ID}', 'execute-snapshot', 
+ '{\"data-collections\": [\"inventory.orders\", \"inventory.order_items\"], \"type\": \"incremental\"}');
+"
+```
+
+#### 3.4 Monitor Signal Processing
+```bash
+# Check signal table
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "SELECT * FROM debezium_signal;"
+
+# Check new topics are created
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -E "(orders|order_items)"
+
+# Verify incremental snapshot data
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.orders \
+  --from-beginning --max-messages 3
+```
+
+### Phase 4: Verification of No Data Replay
+
+#### 4.1 Count Messages in Original Tables
+```bash
+# Count customers messages (should remain 3)
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.customers \
+  --from-beginning | wc -l
+
+# Count products messages (should remain 3)
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.products \
+  --from-beginning | wc -l
+```
+
+#### 4.2 Verify New Table Data
+```bash
+# Check orders data (should have 3 messages with "__op":"r")
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.orders \
+  --from-beginning --max-messages 3
+
+# Check order_items data (should have 5 messages with "__op":"r")
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.order_items \
+  --from-beginning --max-messages 5
+```
+
+### Phase 5: Real-time CDC Testing
+
+#### 5.1 Test INSERT Operations
+```bash
+# Add new customer
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "
+INSERT INTO customers (first_name, last_name, email) VALUES ('Alice', 'Brown', 'alice.brown@example.com');
+"
+
+# Add new order
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "
+INSERT INTO orders (customer_id, total_amount, status) VALUES (4, 899.99, 'pending');
+"
+```
+
+#### 5.2 Test UPDATE Operations
+```bash
+# Update product price
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "
+UPDATE products SET price = 899.99, updated_at = NOW() WHERE id = 1;
+"
+```
+
+#### 5.3 Verify Real-time Changes
+```bash
+# Check new customer (should have "__op":"c")
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.customers \
+  --from-beginning | tail -1
+
+# Check product update (should have "__op":"u")
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic dbserver1.inventory.products \
+  --from-beginning | tail -1
+```
+
+## 🔍 Understanding Operation Types
+
+### Message Operation Types (`__op` field):
+
+- **`"r"`** - Read (from snapshot, initial or incremental)
+- **`"c"`** - Create (INSERT operations)
+- **`"u"`** - Update (UPDATE operations)
+- **`"d"`** - Delete (DELETE operations)
+
+### Timeline of Operations:
+
+1. **Initial Snapshot**: `customers` and `products` tables → `"__op":"r"`
+2. **Incremental Snapshot**: `orders` and `order_items` tables → `"__op":"r"`
+3. **Real-time CDC**: All new changes → `"__op":"c"`, `"__op":"u"`, `"__op":"d"`
+
+## 📊 Monitoring and Troubleshooting
+
+### Kafka UI Dashboard
+Access the web interface at http://localhost:8080 to:
+- View all topics and their messages
+- Monitor connector status
+- Inspect message schemas
+- Track consumer lag
+
+### Command Line Monitoring
+
+#### Check Connector Status
+```bash
+curl -s http://localhost:8083/connectors/inventory-connector/status | jq '.'
+```
+
+#### List All Topics
+```bash
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+#### Monitor Connector Logs
+```bash
+docker logs -f connect
+```
+
+#### Check MySQL Binlog Status
+```bash
+docker exec mysql mysql -u root -pdebezium -e "SHOW MASTER STATUS;"
+```
+
+#### View Signal Processing
+```bash
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "SELECT * FROM debezium_signal ORDER BY id DESC LIMIT 10;"
+```
+
+### Common Issues and Solutions
+
+#### Issue: Connector Fails to Start
+**Solution**: Check MySQL binlog configuration
+```bash
+docker exec mysql mysql -u root -pdebezium -e "SHOW VARIABLES LIKE '%binlog%';"
+```
+
+#### Issue: No Messages in Topics
+**Solution**: Verify table.include.list configuration
+```bash
+curl -s http://localhost:8083/connectors/inventory-connector/config | jq '.["table.include.list"]'
+```
+
+#### Issue: Signal Not Processed
+**Solution**: Check signal table permissions and format
+```bash
+docker exec mysql mysql -u mysqluser -pmysqlpw -D inventory -e "DESCRIBE debezium_signal;"
+```
+
+#### Issue: Kafka Connect Not Ready
+**Solution**: Wait for all dependencies
+```bash
+# Check health of all services
+docker compose ps
+```
+
+## 🧹 Cleanup
+
+### Stop Services
+```bash
+docker compose down
+```
+
+### Remove All Data (WARNING: This deletes everything)
+```bash
+docker compose down -v
+```
+
+### Remove Images
+```bash
+docker rmi apache/kafka:3.7.0 mysql:8.0 debezium/connect:2.4 provectuslabs/kafka-ui:latest
+```
+
+## 🚀 Production Considerations
+
+### Security
+- Use proper authentication for Kafka and MySQL
+- Encrypt connections with SSL/TLS
+- Implement proper access controls
+- Store passwords in secrets management systems
+
+### Scalability
+- Use multiple Kafka brokers for high availability
+- Configure appropriate replication factors
+- Monitor resource usage and scale accordingly
+- Implement proper partitioning strategies
+
+### Monitoring
+- Set up comprehensive monitoring with Prometheus/Grafana
+- Monitor connector lag and throughput
+- Set up alerts for connector failures
+- Track MySQL binlog position and retention
+
+### Backup and Recovery
+- Regular backups of MySQL data
+- Kafka topic backup strategies
+- Connector configuration versioning
+- Disaster recovery procedures
+
+## 📚 Additional Resources
+
+- [Debezium Documentation](https://debezium.io/documentation/)
+- [Kafka KRaft Mode](https://kafka.apache.org/documentation/#kraft)
+- [Debezium Signalling](https://debezium.io/documentation/reference/stable/configuration/signalling.html)
+- [MySQL Binlog Configuration](https://dev.mysql.com/doc/refman/8.0/en/binary-log.html)
+
+## 🤝 Contributing
+
+Feel free to submit issues, fork the repository, and create pull requests for any improvements.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**Note**: This setup is designed for development and testing. For production use, implement proper security, monitoring, and high availability configurations.
